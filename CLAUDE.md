@@ -66,3 +66,34 @@ Three core tables with hierarchical structure:
 ### Network
 
 All Docker services communicate via `ems-network` bridge. Imgproxy connects to MinIO using S3 protocol.
+
+## Development Commands
+
+```bash
+# Backend
+cd backend
+npm run start:dev          # Start development server
+npm test                   # Run all tests
+npm test -- --testPathPatterns="projects"  # Run specific module tests
+
+# Frontend
+cd frontend
+npm run dev               # Start development server
+npm run build             # Build for production
+```
+
+## Current Progress
+
+See `TODO.md` for detailed progress tracking.
+
+**Completed:**
+- Phase 0: Project initialization
+- Phase 1.1: Projects management (API + UI)
+- Phase 1.2: Folders management (API + UI)
+
+**In Progress:**
+- Phase 1.3: File upload (Presigned URL)
+
+**Pending:**
+- Phase 1.4: Photo browsing (react-photo-album)
+- Phase 2: Authentication & permissions
