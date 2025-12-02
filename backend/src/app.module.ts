@@ -5,6 +5,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import configuration from './config/configuration';
 import { getDatabaseConfig } from './config/database.config';
+import { ProjectsModule } from './modules/projects/projects.module';
+import { FoldersModule } from './modules/folders/folders.module';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { getDatabaseConfig } from './config/database.config';
       inject: [ConfigService],
       useFactory: getDatabaseConfig,
     }),
+    ProjectsModule,
+    FoldersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
