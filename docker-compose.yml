@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # 1. 資料庫 (PostgreSQL)
+  postgres:
+    image: postgres:15-alpine
+    container_name: ems_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ems-network
+
+  # 2. 物件儲存 (MinIO - 模擬 GCS)
+  minio:
+    image: minio/minio:latest
+    container_name: ems_minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000" # API Port (程式連這個)
+      - "9001:9001" # Web Console (瀏覽器開這個)
+    volumes:
+      - minio_data:/data
+    networks:
+      - ems-network
+
+  # 2.1 自動建立 Bucket 的小工具 (啟動後執行一次即退出)
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      /usr/bin/mc mb myminio/${MINIO_DEFAULT_BUCKET};
+      /usr/bin/mc anonymous set public myminio/${MINIO_DEFAULT_BUCKET};
+      exit 0;
+      "
+    networks:
+      - ems-network
+
+  # 3. 圖片處理服務 (Imgproxy)
+  imgproxy:
+    image: darthsim/imgproxy:latest
+    container_name: ems_imgproxy
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # 連接 MinIO 的設定
+      IMGPROXY_USE_S3: "true"
+      IMGPROXY_S3_ENDPOINT: "http://minio:9000" # 容器內互連用 Service Name
+      IMGPROXY_S3_USE_HTTPS: "false" # 本地開發不跑 HTTPS
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      
+      # 安全性設定 (開發環境可先設為 false 方便測試，但在這裡我們先啟用基本設定)
+      IMGPROXY_KEY: ${IMGPROXY_KEY}
+      IMGPROXY_SALT: ${IMGPROXY_SALT}
+      IMGPROXY_SIGNATURE_SIZE: 32
+      
+      # Log 設定
+      IMGPROXY_LOG_LEVEL: "info"
+    networks:
+      - ems-network
+
+networks:
+  ems-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
